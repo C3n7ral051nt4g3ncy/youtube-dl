@@ -62,7 +62,9 @@ class AnimeOnDemandIE(InfoExtractor):
 
         if '>Our licensing terms allow the distribution of animes only to German-speaking countries of Europe' in login_page:
             self.raise_geo_restricted(
-                '%s is only available in German-speaking countries of Europe' % self.IE_NAME)
+                f'{self.IE_NAME} is only available in German-speaking countries of Europe'
+            )
+
 
         login_form = self._form_hidden_inputs('new_user', login_page)
 
@@ -85,11 +87,14 @@ class AnimeOnDemandIE(InfoExtractor):
             })
 
         if all(p not in response for p in ('>Logout<', 'href="/users/sign_out"')):
-            error = self._search_regex(
+            if error := self._search_regex(
                 r'<p[^>]+\bclass=(["\'])(?:(?!\1).)*\balert\b(?:(?!\1).)*\1[^>]*>(?P<error>.+?)</p>',
-                response, 'error', default=None, group='error')
-            if error:
-                raise ExtractorError('Unable to login: %s' % error, expected=True)
+                response,
+                'error',
+                default=None,
+                group='error',
+            ):
+                raise ExtractorError(f'Unable to login: {error}', expected=True)
             raise ExtractorError('Unable to log in')
 
     def _real_initialize(self):
@@ -154,14 +159,18 @@ class AnimeOnDemandIE(InfoExtractor):
                         item_id_list.append(format_id)
                     item_id_list.append('videomaterial')
                     playlist = self._download_json(
-                        urljoin(url, playlist_url), video_id,
-                        'Downloading %s JSON' % ' '.join(item_id_list),
+                        urljoin(url, playlist_url),
+                        video_id,
+                        f"Downloading {' '.join(item_id_list)} JSON",
                         headers={
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-Token': csrf_token,
                             'Referer': url,
                             'Accept': 'application/json, text/javascript, */*; q=0.01',
-                        }, fatal=False)
+                        },
+                        fatal=False,
+                    )
+
                     if not playlist:
                         continue
                     stream_url = url_or_none(playlist.get('streamurl'))
@@ -170,16 +179,19 @@ class AnimeOnDemandIE(InfoExtractor):
                             r'^(?P<url>rtmpe?://(?P<host>[^/]+)/(?P<app>.+/))(?P<playpath>mp[34]:.+)',
                             stream_url)
                         if rtmp:
-                            formats.append({
-                                'url': rtmp.group('url'),
-                                'app': rtmp.group('app'),
-                                'play_path': rtmp.group('playpath'),
-                                'page_url': url,
-                                'player_url': 'https://www.anime-on-demand.de/assets/jwplayer.flash-55abfb34080700304d49125ce9ffb4a6.swf',
-                                'rtmp_real_time': True,
-                                'format_id': 'rtmp',
-                                'ext': 'flv',
-                            })
+                            formats.append(
+                                {
+                                    'url': rtmp['url'],
+                                    'app': rtmp['app'],
+                                    'play_path': rtmp['playpath'],
+                                    'page_url': url,
+                                    'player_url': 'https://www.anime-on-demand.de/assets/jwplayer.flash-55abfb34080700304d49125ce9ffb4a6.swf',
+                                    'rtmp_real_time': True,
+                                    'format_id': 'rtmp',
+                                    'ext': 'flv',
+                                }
+                            )
+
                             continue
                     start_video = playlist.get('startvideo', 0)
                     playlist = playlist.get('playlist')
@@ -207,8 +219,6 @@ class AnimeOnDemandIE(InfoExtractor):
                                 entry_protocol='m3u8_native', m3u8_id=format_id, fatal=False)
                         elif source.get('type') == 'video/dash' or ext == 'mpd':
                             continue
-                            file_formats = self._extract_mpd_formats(
-                                file_, video_id, mpd_id=format_id, fatal=False)
                         else:
                             continue
                         for f in file_formats:
@@ -240,11 +250,14 @@ class AnimeOnDemandIE(InfoExtractor):
                     html)
                 if m:
                     f = common_info.copy()
-                    f.update({
-                        'id': '%s-%s' % (f['id'], m.group('kind').lower()),
-                        'title': m.group('title'),
-                        'url': urljoin(url, m.group('href')),
-                    })
+                    f.update(
+                        {
+                            'id': f"{f['id']}-{m['kind'].lower()}",
+                            'title': m['title'],
+                            'url': urljoin(url, m['href']),
+                        }
+                    )
+
                     yield f
 
         def extract_episodes(html):
@@ -273,8 +286,7 @@ class AnimeOnDemandIE(InfoExtractor):
                     'episode_number': episode_number,
                 }
 
-                for e in extract_entries(episode_html, video_id, common_info):
-                    yield e
+                yield from extract_entries(episode_html, video_id, common_info)
 
         def extract_film(html, video_id):
             common_info = {
@@ -282,8 +294,7 @@ class AnimeOnDemandIE(InfoExtractor):
                 'title': anime_title,
                 'description': anime_description,
             }
-            for e in extract_entries(html, video_id, common_info):
-                yield e
+            yield from extract_entries(html, video_id, common_info)
 
         def entries():
             has_episodes = False
@@ -292,8 +303,7 @@ class AnimeOnDemandIE(InfoExtractor):
                 yield e
 
             if not has_episodes:
-                for e in extract_film(webpage, anime_id):
-                    yield e
+                yield from extract_film(webpage, anime_id)
 
         return self.playlist_result(
             entries(), anime_id, anime_title, anime_description)

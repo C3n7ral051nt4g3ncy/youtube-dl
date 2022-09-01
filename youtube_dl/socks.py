@@ -121,10 +121,10 @@ class sockssocket(socket.socket):
     def recvall(self, cnt):
         data = b''
         while len(data) < cnt:
-            cur = self.recv(cnt - len(data))
-            if not cur:
+            if cur := self.recv(cnt - len(data)):
+                data += cur
+            else:
                 raise EOFError('{0} bytes missing'.format(cnt - len(data)))
-            data += cur
         return data
 
     def _recv_bytes(self, cnt):

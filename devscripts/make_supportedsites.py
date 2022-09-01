@@ -35,8 +35,9 @@ def main():
 
     ies = sorted(youtube_dl.gen_extractors(), key=lambda i: i.IE_NAME.lower())
     out = '# Supported sites\n' + ''.join(
-        ' - ' + md + '\n'
-        for md in gen_ies_md(ies))
+        f' - {md}' + '\n' for md in gen_ies_md(ies)
+    )
+
 
     with io.open(outfile, 'w', encoding='utf-8') as outf:
         outf.write(out)

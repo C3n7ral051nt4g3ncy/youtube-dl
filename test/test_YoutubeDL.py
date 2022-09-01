@@ -337,8 +337,9 @@ class TestFormatSelection(unittest.TestCase):
                 info['acodec'] = 'none'
 
             info['format_id'] = f_id
-            info['url'] = 'url:' + f_id
+            info['url'] = f'url:{f_id}'
             return info
+
         formats_order = [format_info(f_id) for f_id in order]
 
         info_dict = _make_result(list(formats_order), extractor='youtube')
@@ -554,13 +555,17 @@ class TestFormatSelection(unittest.TestCase):
 class TestYoutubeDL(unittest.TestCase):
     def test_subtitles(self):
         def s_formats(lang, autocaption=False):
-            return [{
-                'ext': ext,
-                'url': 'http://localhost/video.%s.%s' % (lang, ext),
-                '_auto': autocaption,
-            } for ext in ['vtt', 'srt', 'ass']]
-        subtitles = dict((l, s_formats(l)) for l in ['en', 'fr', 'es'])
-        auto_captions = dict((l, s_formats(l, True)) for l in ['it', 'pt', 'es'])
+            return [
+                {
+                    'ext': ext,
+                    'url': f'http://localhost/video.{lang}.{ext}',
+                    '_auto': autocaption,
+                }
+                for ext in ['vtt', 'srt', 'ass']
+            ]
+
+        subtitles = {l: s_formats(l) for l in ['en', 'fr', 'es']}
+        auto_captions = {l: s_formats(l, True) for l in ['it', 'pt', 'es']}
         info_dict = {
             'id': 'test',
             'title': 'Test',
@@ -584,7 +589,7 @@ class TestYoutubeDL(unittest.TestCase):
         result = get_info({'writesubtitles': True})
         subs = result['requested_subtitles']
         self.assertTrue(subs)
-        self.assertEqual(set(subs.keys()), set(['en']))
+        self.assertEqual(set(subs.keys()), {'en'})
         self.assertTrue(subs['en'].get('data') is None)
         self.assertEqual(subs['en']['ext'], 'ass')
 
@@ -595,19 +600,19 @@ class TestYoutubeDL(unittest.TestCase):
         result = get_info({'writesubtitles': True, 'subtitleslangs': ['es', 'fr', 'it']})
         subs = result['requested_subtitles']
         self.assertTrue(subs)
-        self.assertEqual(set(subs.keys()), set(['es', 'fr']))
+        self.assertEqual(set(subs.keys()), {'es', 'fr'})
 
         result = get_info({'writesubtitles': True, 'writeautomaticsub': True, 'subtitleslangs': ['es', 'pt']})
         subs = result['requested_subtitles']
         self.assertTrue(subs)
-        self.assertEqual(set(subs.keys()), set(['es', 'pt']))
+        self.assertEqual(set(subs.keys()), {'es', 'pt'})
         self.assertFalse(subs['es']['_auto'])
         self.assertTrue(subs['pt']['_auto'])
 
         result = get_info({'writeautomaticsub': True, 'subtitleslangs': ['es', 'pt']})
         subs = result['requested_subtitles']
         self.assertTrue(subs)
-        self.assertEqual(set(subs.keys()), set(['es', 'pt']))
+        self.assertEqual(set(subs.keys()), {'es', 'pt'})
         self.assertTrue(subs['es']['_auto'])
         self.assertTrue(subs['pt']['_auto'])
 
@@ -677,7 +682,7 @@ class TestYoutubeDL(unittest.TestCase):
 
     def test_postprocessors(self):
         filename = 'post-processor-testfile.mp4'
-        audiofile = filename + '.mp3'
+        audiofile = f'{filename}.mp3'
 
         class SimplePP(PostProcessor):
             def run(self, info):
@@ -699,7 +704,7 @@ class TestYoutubeDL(unittest.TestCase):
         os.unlink(audiofile)
 
         run_pp({'keepvideo': False}, SimplePP)
-        self.assertFalse(os.path.exists(filename), '%s exists' % filename)
+        self.assertFalse(os.path.exists(filename), f'{filename} exists')
         self.assertTrue(os.path.exists(audiofile), '%s doesn\'t exist' % audiofile)
         os.unlink(audiofile)
 
@@ -714,6 +719,7 @@ class TestYoutubeDL(unittest.TestCase):
         os.unlink(filename)
 
     def test_match_filter(self):
+
         class FilterYDL(YDL):
             def __init__(self, *args, **kwargs):
                 super(FilterYDL, self).__init__(*args, **kwargs)
@@ -762,10 +768,8 @@ class TestYoutubeDL(unittest.TestCase):
         self.assertEqual(res, ['1', '2'])
 
         def f(v):
-            if v['id'] == '1':
-                return None
-            else:
-                return 'Video id is not 1'
+            return None if v['id'] == '1' else 'Video id is not 1'
+
         res = get_videos(f)
         self.assertEqual(res, ['1'])
 
@@ -930,6 +934,7 @@ class TestYoutubeDL(unittest.TestCase):
     # Test case for https://github.com/ytdl-org/youtube-dl/issues/27064
     def test_ignoreerrors_for_playlist_with_url_transparent_iterable_entries(self):
 
+
         class _YDL(YDL):
             def __init__(self, *args, **kwargs):
                 super(_YDL, self).__init__(*args, **kwargs)
@@ -941,6 +946,8 @@ class TestYoutubeDL(unittest.TestCase):
             'format': 'extra',
             'ignoreerrors': True,
         })
+
+
 
         class VideoIE(InfoExtractor):
             _VALID_URL = r'video:(?P<id>\d+)'
@@ -958,11 +965,10 @@ class TestYoutubeDL(unittest.TestCase):
                         'format_id': 'extra',
                         'url': TEST_URL,
                     })
-                return {
-                    'id': video_id,
-                    'title': 'Video %s' % video_id,
-                    'formats': formats,
-                }
+                return {'id': video_id, 'title': f'Video {video_id}', 'formats': formats}
+
+
+
 
         class PlaylistIE(InfoExtractor):
             _VALID_URL = r'playlist:'
@@ -974,12 +980,14 @@ class TestYoutubeDL(unittest.TestCase):
                         '_type': 'url_transparent',
                         'ie_key': VideoIE.ie_key(),
                         'id': video_id,
-                        'url': 'video:%s' % video_id,
-                        'title': 'Video Transparent %s' % video_id,
+                        'url': f'video:{video_id}',
+                        'title': f'Video Transparent {video_id}',
                     }
+
 
             def _real_extract(self, url):
                 return self.playlist_result(self._entries())
+
 
         ydl.add_info_extractor(VideoIE(ydl))
         ydl.add_info_extractor(PlaylistIE(ydl))

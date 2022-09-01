@@ -49,14 +49,16 @@ class TestUnicodeLiterals(unittest.TestCase):
                     self,
                     code,
                     r'(?:(?:#.*?|\s*)\n)*from __future__ import (?:[a-z_]+,\s*)*unicode_literals',
-                    'unicode_literals import  missing in %s' % fn)
+                    f'unicode_literals import  missing in {fn}',
+                )
+
 
                 m = re.search(r'(?<=\s)u[\'"](?!\)|,|$)', code)
                 if m is not None:
                     self.assertTrue(
                         m is None,
-                        'u present in %s, around %s' % (
-                            fn, code[m.start() - 10:m.end() + 10]))
+                        f'u present in {fn}, around {code[m.start() - 10:m.end() + 10]}',
+                    )
 
 
 if __name__ == '__main__':

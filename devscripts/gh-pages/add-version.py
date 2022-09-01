@@ -24,15 +24,17 @@ new_version = {}
 filenames = {
     'bin': 'youtube-dl',
     'exe': 'youtube-dl.exe',
-    'tar': 'youtube-dl-%s.tar.gz' % version}
+    'tar': f'youtube-dl-{version}.tar.gz',
+}
+
 build_dir = os.path.join('..', '..', 'build', version)
 for key, filename in filenames.items():
-    url = 'https://yt-dl.org/downloads/%s/%s' % (version, filename)
+    url = f'https://yt-dl.org/downloads/{version}/{filename}'
     fn = os.path.join(build_dir, filename)
     with open(fn, 'rb') as f:
         data = f.read()
     if not data:
-        raise ValueError('File %s is empty!' % fn)
+        raise ValueError(f'File {fn} is empty!')
     sha256sum = hashlib.sha256(data).hexdigest()
     new_version[key] = (url, sha256sum)
 

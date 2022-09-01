@@ -51,7 +51,7 @@ class GitHubReleaser(object):
     def _call(self, req):
         if isinstance(req, compat_basestring):
             req = sanitized_Request(req)
-        req.add_header('Authorization', 'token %s' % self._token)
+        req.add_header('Authorization', f'token {self._token}')
         response = self._opener.open(req).read().decode('utf-8')
         return json.loads(response)
 
@@ -93,16 +93,18 @@ def main():
         changelog = inf.read()
 
     mobj = re.search(r'(?s)version %s\n{2}(.+?)\n{3}' % version, changelog)
-    body = mobj.group(1) if mobj else ''
+    body = mobj[1] if mobj else ''
 
     releaser = GitHubReleaser()
 
     new_release = releaser.create_release(
-        version, name='youtube-dl %s' % version, body=body)
+        version, name=f'youtube-dl {version}', body=body
+    )
+
     release_id = new_release['id']
 
     for asset in os.listdir(build_path):
-        compat_print('Uploading %s...' % asset)
+        compat_print(f'Uploading {asset}...')
         releaser.create_asset(release_id, os.path.join(build_path, asset))
 
 

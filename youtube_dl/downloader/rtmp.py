@@ -46,8 +46,8 @@ class RtmpFD(FileDownloader):
                         continue
                     mobj = re.search(r'([0-9]+\.[0-9]{3}) kB / [0-9]+\.[0-9]{2} sec \(([0-9]{1,2}\.[0-9])%\)', line)
                     if mobj:
-                        downloaded_data_len = int(float(mobj.group(1)) * 1024)
-                        percent = float(mobj.group(2))
+                        downloaded_data_len = int(float(mobj[1]) * 1024)
+                        percent = float(mobj[2])
                         if not resume_percent:
                             resume_percent = percent
                             resume_downloaded_data_len = downloaded_data_len
@@ -72,7 +72,7 @@ class RtmpFD(FileDownloader):
                         # no percent for live streams
                         mobj = re.search(r'([0-9]+\.[0-9]{3}) kB / [0-9]+\.[0-9]{2} sec', line)
                         if mobj:
-                            downloaded_data_len = int(float(mobj.group(1)) * 1024)
+                            downloaded_data_len = int(float(mobj[1]) * 1024)
                             time_now = time.time()
                             speed = self.calc_speed(start, time_now, downloaded_data_len)
                             self._hook_progress({
@@ -88,7 +88,7 @@ class RtmpFD(FileDownloader):
                             if not cursor_in_new_line:
                                 self.to_screen('')
                             cursor_in_new_line = True
-                            self.to_screen('[rtmpdump] ' + line)
+                            self.to_screen(f'[rtmpdump] {line}')
             finally:
                 proc.wait()
             if not cursor_in_new_line:
@@ -181,7 +181,7 @@ class RtmpFD(FileDownloader):
 
         while retval in (RD_INCOMPLETE, RD_FAILED) and not test and not live:
             prevsize = os.path.getsize(encodeFilename(tmpfilename))
-            self.to_screen('[rtmpdump] Downloaded %s bytes' % prevsize)
+            self.to_screen(f'[rtmpdump] Downloaded {prevsize} bytes')
             time.sleep(5.0)  # This seems to be needed
             args = basic_args + ['--resume']
             if retval == RD_FAILED:
@@ -198,7 +198,7 @@ class RtmpFD(FileDownloader):
                 break
         if retval == RD_SUCCESS or (test and retval == RD_INCOMPLETE):
             fsize = os.path.getsize(encodeFilename(tmpfilename))
-            self.to_screen('[rtmpdump] Downloaded %s bytes' % fsize)
+            self.to_screen(f'[rtmpdump] Downloaded {fsize} bytes')
             self.try_rename(tmpfilename, filename)
             self._hook_progress({
                 'downloaded_bytes': fsize,

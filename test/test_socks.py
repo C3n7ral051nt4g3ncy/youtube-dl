@@ -27,7 +27,7 @@ class TestMultipleSocks(unittest.TestCase):
         params = get_params()
         for attr in attrs:
             if attr not in params:
-                print('Missing %s. Skipping.' % attr)
+                print(f'Missing {attr}. Skipping.')
                 return
         return params
 

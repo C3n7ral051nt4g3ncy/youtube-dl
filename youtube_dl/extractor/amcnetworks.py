@@ -66,14 +66,16 @@ class AMCNetworksIE(ThePlatformIE):
         site, display_id = re.match(self._VALID_URL, url).groups()
         requestor_id = self._REQUESTOR_ID_MAP[site]
         properties = self._download_json(
-            'https://content-delivery-gw.svc.ds.amcn.com/api/v2/content/amcn/%s/url/%s' % (requestor_id.lower(), display_id),
-            display_id)['data']['properties']
+            f'https://content-delivery-gw.svc.ds.amcn.com/api/v2/content/amcn/{requestor_id.lower()}/url/{display_id}',
+            display_id,
+        )['data']['properties']
+
         query = {
             'mbr': 'true',
             'manifest': 'm3u',
         }
         tp_path = 'M_UwQC/media/' + properties['videoPid']
-        media_url = 'https://link.theplatform.com/s/' + tp_path
+        media_url = f'https://link.theplatform.com/s/{tp_path}'
         theplatform_metadata = self._download_theplatform_metadata(tp_path, display_id)
         info = self._parse_theplatform_metadata(theplatform_metadata)
         video_id = theplatform_metadata['pid']
@@ -96,19 +98,16 @@ class AMCNetworksIE(ThePlatformIE):
             'formats': formats,
             'age_limit': parse_age_limit(parse_age_limit(rating)),
         })
-        ns_keys = theplatform_metadata.get('$xmlns', {}).keys()
-        if ns_keys:
+        if ns_keys := theplatform_metadata.get('$xmlns', {}).keys():
             ns = list(ns_keys)[0]
-            series = theplatform_metadata.get(ns + '$show')
-            season_number = int_or_none(
-                theplatform_metadata.get(ns + '$season'))
-            episode = theplatform_metadata.get(ns + '$episodeTitle')
-            episode_number = int_or_none(
-                theplatform_metadata.get(ns + '$episode'))
+            series = theplatform_metadata.get(f'{ns}$show')
+            season_number = int_or_none(theplatform_metadata.get(f'{ns}$season'))
+            episode = theplatform_metadata.get(f'{ns}$episodeTitle')
+            episode_number = int_or_none(theplatform_metadata.get(f'{ns}$episode'))
             if season_number:
                 title = 'Season %d - %s' % (season_number, title)
             if series:
-                title = '%s - %s' % (series, title)
+                title = f'{series} - {title}'
             info.update({
                 'title': title,
                 'series': series,

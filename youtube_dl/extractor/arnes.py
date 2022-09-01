@@ -60,21 +60,21 @@ class ArnesIE(InfoExtractor):
         video_id = self._match_id(url)
 
         video = self._download_json(
-            self._BASE_URL + '/api/public/video/' + video_id, video_id)['data']
+            f'{self._BASE_URL}/api/public/video/{video_id}', video_id
+        )['data']
+
         title = video['title']
 
         formats = []
         for media in (video.get('media') or []):
-            media_url = media.get('url')
-            if not media_url:
-                continue
-            formats.append({
-                'url': self._BASE_URL + media_url,
-                'format_id': remove_start(media.get('format'), 'FORMAT_'),
-                'format_note': media.get('formatTranslation'),
-                'width': int_or_none(media.get('width')),
-                'height': int_or_none(media.get('height')),
-            })
+            if media_url := media.get('url'):
+                formats.append({
+                    'url': self._BASE_URL + media_url,
+                    'format_id': remove_start(media.get('format'), 'FORMAT_'),
+                    'format_note': media.get('formatTranslation'),
+                    'width': int_or_none(media.get('width')),
+                    'height': int_or_none(media.get('height')),
+                })
         self._sort_formats(formats)
 
         channel = video.get('channel') or {}
@@ -92,10 +92,15 @@ class ArnesIE(InfoExtractor):
             'timestamp': parse_iso8601(video.get('creationTime')),
             'channel': channel.get('name'),
             'channel_id': channel_id,
-            'channel_url': self._BASE_URL + '/?channel=' + channel_id if channel_id else None,
+            'channel_url': f'{self._BASE_URL}/?channel={channel_id}'
+            if channel_id
+            else None,
             'duration': float_or_none(video.get('duration'), 1000),
             'view_count': int_or_none(video.get('views')),
             'tags': video.get('hashtags'),
-            'start_time': int_or_none(compat_parse_qs(
-                compat_urllib_parse_urlparse(url).query).get('t', [None])[0]),
+            'start_time': int_or_none(
+                compat_parse_qs(compat_urllib_parse_urlparse(url).query).get(
+                    't', [None]
+                )[0]
+            ),
         }

@@ -78,8 +78,9 @@ class ADNIE(InfoExtractor):
 
         enc_subtitles = self._download_webpage(
             sub_url, video_id, 'Downloading subtitles location', fatal=False) or '{}'
-        subtitle_location = (self._parse_json(enc_subtitles, video_id, fatal=False) or {}).get('location')
-        if subtitle_location:
+        if subtitle_location := (
+            self._parse_json(enc_subtitles, video_id, fatal=False) or {}
+        ).get('location'):
             enc_subtitles = self._download_webpage(
                 subtitle_location, video_id, 'Downloading subtitles data',
                 fatal=False, headers={'Origin': 'https://animedigitalnetwork.fr'})
@@ -87,11 +88,14 @@ class ADNIE(InfoExtractor):
             return None
 
         # http://animedigitalnetwork.fr/components/com_vodvideo/videojs/adn-vjs.min.js
-        dec_subtitles = intlist_to_bytes(aes_cbc_decrypt(
-            bytes_to_intlist(compat_b64decode(enc_subtitles[24:])),
-            bytes_to_intlist(binascii.unhexlify(self._K + 'ab9f52f5baae7c72')),
-            bytes_to_intlist(compat_b64decode(enc_subtitles[:24]))
-        ))
+        dec_subtitles = intlist_to_bytes(
+            aes_cbc_decrypt(
+                bytes_to_intlist(compat_b64decode(enc_subtitles[24:])),
+                bytes_to_intlist(binascii.unhexlify(f'{self._K}ab9f52f5baae7c72')),
+                bytes_to_intlist(compat_b64decode(enc_subtitles[:24])),
+            )
+        )
+
         subtitles_json = self._parse_json(
             dec_subtitles[:-compat_ord(dec_subtitles[-1])].decode(),
             None, fatal=False)
@@ -138,17 +142,25 @@ Format: Marked,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text'''
         if not username:
             return
         try:
-            access_token = (self._download_json(
-                self._API_BASE_URL + 'authentication/login', None,
-                'Logging in', self._LOGIN_ERR_MESSAGE, fatal=False,
-                data=urlencode_postdata({
-                    'password': password,
-                    'rememberMe': False,
-                    'source': 'Web',
-                    'username': username,
-                })) or {}).get('accessToken')
-            if access_token:
-                self._HEADERS = {'authorization': 'Bearer ' + access_token}
+            if access_token := (
+                self._download_json(
+                    f'{self._API_BASE_URL}authentication/login',
+                    None,
+                    'Logging in',
+                    self._LOGIN_ERR_MESSAGE,
+                    fatal=False,
+                    data=urlencode_postdata(
+                        {
+                            'password': password,
+                            'rememberMe': False,
+                            'source': 'Web',
+                            'username': username,
+                        }
+                    ),
+                )
+                or {}
+            ).get('accessToken'):
+                self._HEADERS = {'authorization': f'Bearer {access_token}'}
         except ExtractorError as e:
             message = None
             if isinstance(e.cause, compat_HTTPError) and e.cause.code == 401:
@@ -159,11 +171,14 @@ Format: Marked,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text'''
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
-        video_base_url = self._PLAYER_BASE_URL + 'video/%s/' % video_id
+        video_base_url = self._PLAYER_BASE_URL + f'video/{video_id}/'
         player = self._download_json(
-            video_base_url + 'configuration', video_id,
+            f'{video_base_url}configuration',
+            video_id,
             'Downloading player config JSON metadata',
-            headers=self._HEADERS)['player']
+            headers=self._HEADERS,
+        )['player']
+
         options = player['options']
 
         user = options['user']
@@ -171,12 +186,19 @@ Format: Marked,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text'''
             self.raise_login_required()
 
         token = self._download_json(
-            user.get('refreshTokenUrl') or (self._PLAYER_BASE_URL + 'refresh/token'),
-            video_id, 'Downloading access token', headers={
-                'x-player-refresh-token': user['refreshToken']
-            }, data=b'')['token']
+            user.get('refreshTokenUrl') or f'{self._PLAYER_BASE_URL}refresh/token',
+            video_id,
+            'Downloading access token',
+            headers={'x-player-refresh-token': user['refreshToken']},
+            data=b'',
+        )['token']
 
-        links_url = try_get(options, lambda x: x['video']['url']) or (video_base_url + 'link')
+
+        links_url = (
+            try_get(options, lambda x: x['video']['url'])
+            or f'{video_base_url}link'
+        )
+
         self._K = ''.join([random.choice('0123456789abcdef') for _ in range(16)])
         message = bytes_to_intlist(json.dumps({
             'k': self._K,
@@ -230,10 +252,16 @@ Format: Marked,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text'''
             if not isinstance(qualities, dict):
                 continue
             for quality, load_balancer_url in qualities.items():
-                load_balancer_data = self._download_json(
-                    load_balancer_url, video_id,
-                    'Downloading %s %s JSON metadata' % (format_id, quality),
-                    fatal=False) or {}
+                load_balancer_data = (
+                    self._download_json(
+                        load_balancer_url,
+                        video_id,
+                        f'Downloading {format_id} {quality} JSON metadata',
+                        fatal=False,
+                    )
+                    or {}
+                )
+
                 m3u8_url = load_balancer_data.get('location')
                 if not m3u8_url:
                     continue
@@ -246,9 +274,16 @@ Format: Marked,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text'''
                 formats.extend(m3u8_formats)
         self._sort_formats(formats)
 
-        video = (self._download_json(
-            self._API_BASE_URL + 'video/%s' % video_id, video_id,
-            'Downloading additional video metadata', fatal=False) or {}).get('video') or {}
+        video = (
+            self._download_json(
+                self._API_BASE_URL + f'video/{video_id}',
+                video_id,
+                'Downloading additional video metadata',
+                fatal=False,
+            )
+            or {}
+        ).get('video') or {}
+
         show = video.get('show') or {}
 
         return {

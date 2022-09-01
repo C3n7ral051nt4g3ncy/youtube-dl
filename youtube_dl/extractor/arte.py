@@ -51,11 +51,13 @@ class ArteTVIE(ArteTVBaseIE):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        video_id = mobj.group('id')
-        lang = mobj.group('lang') or mobj.group('lang_2')
+        video_id = mobj['id']
+        lang = mobj['lang'] or mobj['lang_2']
 
         info = self._download_json(
-            '%s/config/%s/%s' % (self._API_BASE, lang, video_id), video_id)
+            f'{self._API_BASE}/config/{lang}/{video_id}', video_id
+        )
+
         player_info = info['videoJsonPlayer']
 
         vsr = try_get(player_info, lambda x: x['VSR'], dict)
@@ -65,7 +67,7 @@ class ArteTVIE(ArteTVBaseIE):
                 error = try_get(
                     player_info, lambda x: x['custom_msg']['msg'], compat_str)
             if not error:
-                error = 'Video %s is not available' % player_info.get('VID') or video_id
+                error = f"Video {player_info.get('VID')} is not available" or video_id
             raise ExtractorError(error, expected=True)
 
         upload_date_str = player_info.get('shootingDate')
@@ -73,9 +75,8 @@ class ArteTVIE(ArteTVBaseIE):
             upload_date_str = (player_info.get('VRA') or player_info.get('VDA') or '').split(' ')[0]
 
         title = (player_info.get('VTI') or player_info['VID']).strip()
-        subtitle = player_info.get('VSU', '').strip()
-        if subtitle:
-            title += ' - %s' % subtitle
+        if subtitle := player_info.get('VSU', '').strip():
+            title += f' - {subtitle}'
 
         qfunc = qualities(['MQ', 'HQ', 'EQ', 'SQ'])
 
@@ -132,12 +133,14 @@ class ArteTVIE(ArteTVBaseIE):
                 r'VO(?:(?!{0}).+?)?-STM(?!{0}).+?$'.format(l),
             )
 
-            for pref, p in enumerate(PREFERENCES):
-                if re.match(p, versionCode):
-                    lang_pref = len(PREFERENCES) - pref
-                    break
-            else:
-                lang_pref = -1
+            lang_pref = next(
+                (
+                    len(PREFERENCES) - pref
+                    for pref, p in enumerate(PREFERENCES)
+                    if re.match(p, versionCode)
+                ),
+                -1,
+            )
 
             media_type = f.get('mediaType')
             if media_type == 'hls':
@@ -153,12 +156,13 @@ class ArteTVIE(ArteTVBaseIE):
                 'format_id': format_id,
                 'preference': -10 if f.get('videoFormat') == 'M3U8' else None,
                 'language_preference': lang_pref,
-                'format_note': '%s, %s' % (f.get('versionCode'), f.get('versionLibelle')),
+                'format_note': f"{f.get('versionCode')}, {f.get('versionLibelle')}",
                 'width': int_or_none(f.get('width')),
                 'height': int_or_none(f.get('height')),
                 'tbr': int_or_none(f.get('bitrate')),
                 'quality': qfunc(f.get('quality')),
             }
+
 
             if media_type == 'rtmp':
                 format['url'] = f['streamer']
@@ -229,8 +233,10 @@ class ArteTVPlaylistIE(ArteTVBaseIE):
     def _real_extract(self, url):
         lang, playlist_id = re.match(self._VALID_URL, url).groups()
         collection = self._download_json(
-            '%s/collectionData/%s/%s?source=videos'
-            % (self._API_BASE, lang, playlist_id), playlist_id)
+            f'{self._API_BASE}/collectionData/{lang}/{playlist_id}?source=videos',
+            playlist_id,
+        )
+
         entries = []
         for video in collection['videos']:
             if not isinstance(video, dict):
@@ -293,9 +299,11 @@ class ArteTVCategoryIE(ArteTVBaseIE):
                      or self._html_search_regex(r'<title\b[^>]*>([^<]+)</title>', default=None))
             title = strip_or_none(title.rsplit('|', 1)[0]) or self._generic_title(url)
 
-            result = self.playlist_from_matches(items, playlist_id=playlist_id, playlist_title=title)
-            if result:
-                description = self._og_search_description(webpage, default=None)
-                if description:
+            if result := self.playlist_from_matches(
+                items, playlist_id=playlist_id, playlist_title=title
+            ):
+                if description := self._og_search_description(
+                    webpage, default=None
+                ):
                     result['description'] = description
                 return result

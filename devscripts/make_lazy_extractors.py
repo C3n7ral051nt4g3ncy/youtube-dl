@@ -67,7 +67,7 @@ classes = _ALL_CLASSES[:-1]
 ordered_cls = []
 while classes:
     for c in classes[:]:
-        bases = set(c.__bases__) - set((object, InfoExtractor, SearchInfoExtractor))
+        bases = set(c.__bases__) - {object, InfoExtractor, SearchInfoExtractor}
         stop = False
         for b in bases:
             if b not in classes and b not in ordered_cls:

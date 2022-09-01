@@ -77,25 +77,35 @@ def _ctypes_array(c_type, py_array):
 
 
 def win_OpenSCManager():
-    res = advapi32.OpenSCManagerW(None, None, SC_MANAGER_ALL_ACCESS)
-    if not res:
+    if res := advapi32.OpenSCManagerW(None, None, SC_MANAGER_ALL_ACCESS):
+        return res
+    else:
         raise Exception('Opening service manager failed - '
                         'are you running this as administrator?')
-    return res
 
 
 def win_install_service(service_name, cmdline):
     manager = win_OpenSCManager()
     try:
-        h = advapi32.CreateServiceW(
-            manager, service_name, None,
-            SC_MANAGER_CREATE_SERVICE, SERVICE_WIN32_OWN_PROCESS,
-            SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
-            cmdline, None, None, None, None, None)
-        if not h:
-            raise OSError('Service creation failed: %s' % ctypes.FormatError())
+        if h := advapi32.CreateServiceW(
+            manager,
+            service_name,
+            None,
+            SC_MANAGER_CREATE_SERVICE,
+            SERVICE_WIN32_OWN_PROCESS,
+            SERVICE_AUTO_START,
+            SERVICE_ERROR_NORMAL,
+            cmdline,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ):
+            advapi32.CloseServiceHandle(h)
+        else:
+            raise OSError(f'Service creation failed: {ctypes.FormatError()}')
 
-        advapi32.CloseServiceHandle(h)
     finally:
         advapi32.CloseServiceHandle(manager)
 
@@ -105,12 +115,11 @@ def win_uninstall_service(service_name):
     try:
         h = advapi32.OpenServiceW(manager, service_name, DELETE)
         if not h:
-            raise OSError('Could not find service %s: %s' % (
-                service_name, ctypes.FormatError()))
+            raise OSError(f'Could not find service {service_name}: {ctypes.FormatError()}')
 
         try:
             if not advapi32.DeleteService(h):
-                raise OSError('Deletion failed: %s' % ctypes.FormatError())
+                raise OSError(f'Deletion failed: {ctypes.FormatError()}')
         finally:
             advapi32.CloseServiceHandle(h)
     finally:
@@ -123,7 +132,7 @@ def win_service_report_event(service_name, msg, is_error=True):
 
     event_log = advapi32.RegisterEventSourceW(None, service_name)
     if not event_log:
-        raise OSError('Could not report event: %s' % ctypes.FormatError())
+        raise OSError(f'Could not report event: {ctypes.FormatError()}')
 
     try:
         type_id = 0x0001 if is_error else 0x0004
@@ -133,15 +142,14 @@ def win_service_report_event(service_name, msg, is_error=True):
         if not advapi32.ReportEventW(
                 event_log, type_id, 0, event_id, None, len(lines), 0,
                 lines, None):
-            raise OSError('Event reporting failed: %s' % ctypes.FormatError())
+            raise OSError(f'Event reporting failed: {ctypes.FormatError()}')
     finally:
         advapi32.DeregisterEventSource(event_log)
 
 
 def win_service_handler(stop_event, *args):
     try:
-        raise ValueError('Handler called with args ' + repr(args))
-        TODO
+        raise ValueError(f'Handler called with args {repr(args)}')
     except Exception as e:
         tb = traceback.format_exc()
         msg = str(e) + '\n' + tb
@@ -168,8 +176,7 @@ def win_service_main(service_name, real_main, argc, argv_raw):
         handler = HandlerEx(functools.partial(stop_event, win_service_handler))
         h = advapi32.RegisterServiceCtrlHandlerExW(service_name, handler, None)
         if not h:
-            raise OSError('Handler registration failed: %s' %
-                          ctypes.FormatError())
+            raise OSError(f'Handler registration failed: {ctypes.FormatError()}')
 
         TODO
     except Exception as e:
@@ -192,7 +199,7 @@ def win_service_start(service_name, real_main):
         ])
 
         if not advapi32.StartServiceCtrlDispatcherW(dispatch_table):
-            raise OSError('ctypes start failed: %s' % ctypes.FormatError())
+            raise OSError(f'ctypes start failed: {ctypes.FormatError()}')
     except Exception as e:
         tb = traceback.format_exc()
         msg = str(e) + '\n' + tb
@@ -218,7 +225,7 @@ def main(args=None):
 
     if options.action == 'install':
         fn = os.path.abspath(__file__).replace('v:', '\\\\vboxsrv\\vbox')
-        cmdline = '%s %s -s -b %s' % (sys.executable, fn, options.bind)
+        cmdline = f'{sys.executable} {fn} -s -b {options.bind}'
         win_install_service(SVCNAME, cmdline)
         return
 
@@ -284,7 +291,7 @@ class PythonBuilder(object):
                 pass
 
         if not python_path:
-            raise BuildError('No such Python version: %s' % python_version)
+            raise BuildError(f'No such Python version: {python_version}')
 
         self.pythonPath = python_path
 
@@ -313,7 +320,15 @@ class GITInfoBuilder(object):
 class GITBuilder(GITInfoBuilder):
     def build(self):
         try:
-            subprocess.check_output(['git', 'clone', 'git://github.com/%s/%s.git' % (self.user, self.repoName), self.buildPath])
+            subprocess.check_output(
+                [
+                    'git',
+                    'clone',
+                    f'git://github.com/{self.user}/{self.repoName}.git',
+                    self.buildPath,
+                ]
+            )
+
             subprocess.check_output(['git', 'checkout', self.rev], cwd=self.buildPath)
         except subprocess.CalledProcessError as e:
             raise BuildError(e.output)
@@ -358,11 +373,15 @@ class DownloadBuilder(object):
         if not os.path.exists(self.srcPath):
             raise HTTPError('No such file', 404)
         if os.path.isdir(self.srcPath):
-            raise HTTPError('Is a directory: %s' % self.srcPath, 401)
+            raise HTTPError(f'Is a directory: {self.srcPath}', 401)
 
         self.handler.send_response(200)
         self.handler.send_header('Content-Type', 'application/octet-stream')
-        self.handler.send_header('Content-Disposition', 'attachment; filename=%s' % os.path.split(self.srcPath)[-1])
+        self.handler.send_header(
+            'Content-Disposition',
+            f'attachment; filename={os.path.split(self.srcPath)[-1]}',
+        )
+
         self.handler.send_header('Content-Length', str(os.stat(self.srcPath).st_size))
         self.handler.end_headers()
 

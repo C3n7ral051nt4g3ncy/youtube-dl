@@ -22,7 +22,13 @@ class RtspFD(FileDownloader):
                 '-dumpstream', '-dumpfile', tmpfilename, url]
         elif check_executable('mpv', ['-h']):
             args = [
-                'mpv', '-really-quiet', '--vo=null', '--stream-dump=' + tmpfilename, url]
+                'mpv',
+                '-really-quiet',
+                '--vo=null',
+                f'--stream-dump={tmpfilename}',
+                url,
+            ]
+
         else:
             self.report_error('MMS or RTSP download detected but neither "mplayer" nor "mpv" could be run. Please install any.')
             return False

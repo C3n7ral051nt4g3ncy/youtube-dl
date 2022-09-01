@@ -64,8 +64,11 @@ class AmaraIE(InfoExtractor):
     def _real_extract(self, url):
         video_id = self._match_id(url)
         meta = self._download_json(
-            'https://amara.org/api/videos/%s/' % video_id,
-            video_id, query={'format': 'json'})
+            f'https://amara.org/api/videos/{video_id}/',
+            video_id,
+            query={'format': 'json'},
+        )
+
         title = meta['title']
         video_url = meta['all_urls'][0]
 
@@ -94,10 +97,11 @@ class AmaraIE(InfoExtractor):
 
         for ie in (YoutubeIE, VimeoIE):
             if ie.suitable(video_url):
-                info.update({
+                info |= {
                     '_type': 'url_transparent',
                     'ie_key': ie.ie_key(),
-                })
+                }
+
                 break
 
         return info

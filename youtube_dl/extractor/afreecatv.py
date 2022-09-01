@@ -169,10 +169,9 @@ class AfreecaTVIE(InfoExtractor):
     @staticmethod
     def parse_video_key(key):
         video_key = {}
-        m = re.match(r'^(?P<upload_date>\d{8})_\w+_(?P<part>\d+)$', key)
-        if m:
-            video_key['upload_date'] = m.group('upload_date')
-            video_key['part'] = int(m.group('part'))
+        if m := re.match(r'^(?P<upload_date>\d{8})_\w+_(?P<part>\d+)$', key):
+            video_key['upload_date'] = m['upload_date']
+            video_key['part'] = int(m['part'])
         return video_key
 
     def _real_initialize(self):
@@ -217,8 +216,8 @@ class AfreecaTVIE(InfoExtractor):
         if result != 1:
             error = _ERRORS.get(result, 'You have failed to log in.')
             raise ExtractorError(
-                'Unable to login: %s said: %s' % (self.IE_NAME, error),
-                expected=True)
+                f'Unable to login: {self.IE_NAME} said: {error}', expected=True
+            )
 
     def _real_extract(self, url):
         video_id = self._match_id(url)
@@ -226,8 +225,7 @@ class AfreecaTVIE(InfoExtractor):
         webpage = self._download_webpage(url, video_id)
 
         if re.search(r'alert\(["\']This video has been deleted', webpage):
-            raise ExtractorError(
-                'Video %s has been deleted' % video_id, expected=True)
+            raise ExtractorError(f'Video {video_id} has been deleted', expected=True)
 
         station_id = self._search_regex(
             r'nStationNo\s*=\s*(\d+)', webpage, 'station')
@@ -247,11 +245,15 @@ class AfreecaTVIE(InfoExtractor):
                 query['partialView'] = 'SKIP_ADULT'
             video_xml = self._download_xml(
                 'http://afbbs.afreecatv.com:8080/api/video/get_video_info.php',
-                video_id, 'Downloading video info XML%s'
-                % (' (skipping adult)' if partial_view else ''),
-                video_id, headers={
+                video_id,
+                f"Downloading video info XML{' (skipping adult)' if partial_view else ''}",
+                video_id,
+                headers={
                     'Referer': url,
-                }, query=query)
+                },
+                query=query,
+            )
+
 
             flag = xpath_text(video_xml, './track/flag', 'flag', default=None)
             if flag and flag == 'SUCCEED':
@@ -267,15 +269,13 @@ class AfreecaTVIE(InfoExtractor):
                 error = 'Only users older than 19 are able to watch this video. Provide account credentials to download this content.'
             else:
                 error = flag
-            raise ExtractorError(
-                '%s said: %s' % (self.IE_NAME, error), expected=True)
+            raise ExtractorError(f'{self.IE_NAME} said: {error}', expected=True)
         else:
             raise ExtractorError('Unable to download video info')
 
         video_element = video_xml.findall(compat_xpath('./track/video'))[-1]
         if video_element is None or video_element.text is None:
-            raise ExtractorError(
-                'Video %s does not exist' % video_id, expected=True)
+            raise ExtractorError(f'Video {video_id} does not exist', expected=True)
 
         video_url = video_element.text.strip()
 
@@ -293,12 +293,11 @@ class AfreecaTVIE(InfoExtractor):
             'thumbnail': thumbnail,
         }
 
-        info = common_entry.copy()
-        info.update({
+        info = common_entry | {
             'id': video_id,
             'title': title,
             'duration': duration,
-        })
+        }
 
         if not video_url:
             entries = []
@@ -312,7 +311,7 @@ class AfreecaTVIE(InfoExtractor):
                 upload_date = self._search_regex(
                     r'^(\d{8})_', key, 'upload date', default=None)
                 file_duration = int_or_none(file_element.get('duration'))
-                format_id = key if key else '%s_%s' % (video_id, file_num)
+                format_id = key or f'{video_id}_{file_num}'
                 if determine_ext(file_url) == 'm3u8':
                     formats = self._extract_m3u8_formats(
                         file_url, video_id, 'mp4', entry_protocol='m3u8_native',
@@ -326,21 +325,20 @@ class AfreecaTVIE(InfoExtractor):
                 if not formats:
                     continue
                 self._sort_formats(formats)
-                file_info = common_entry.copy()
-                file_info.update({
+                file_info = common_entry | {
                     'id': format_id,
                     'title': title if one else '%s (part %d)' % (title, file_num),
                     'upload_date': upload_date,
                     'duration': file_duration,
                     'formats': formats,
-                })
+                }
+
                 entries.append(file_info)
-            entries_info = info.copy()
-            entries_info.update({
+            return info | {
                 '_type': 'multi_video',
                 'entries': entries,
-            })
-            return entries_info
+            }
+
 
         info = {
             'id': video_id,
@@ -357,11 +355,12 @@ class AfreecaTVIE(InfoExtractor):
                 m3u8_id='hls')
         else:
             app, playpath = video_url.split('mp4:')
-            info.update({
+            info |= {
                 'url': app,
                 'ext': 'flv',
-                'play_path': 'mp4:' + playpath,
-                'rtmp_live': True,  # downloading won't end without this
-            })
+                'play_path': f'mp4:{playpath}',
+                'rtmp_live': True,
+            }
+
 
         return info

@@ -29,11 +29,11 @@ def _make_testfunc(testfile):
     m = re.match(r'^(.*)\.(as)$', testfile)
     if not m:
         return
-    test_id = m.group(1)
+    test_id = m[1]
 
     def test_func(self):
         as_file = os.path.join(TEST_DIR, testfile)
-        swf_file = os.path.join(TEST_DIR, test_id + '.swf')
+        swf_file = os.path.join(TEST_DIR, f'{test_id}.swf')
         if ((not os.path.exists(swf_file))
                 or os.path.getmtime(swf_file) < os.path.getmtime(as_file)):
             # Recompile
@@ -58,8 +58,8 @@ def _make_testfunc(testfile):
             m = re.search(
                 r'(?m)^//\s*%s:\s*(.*?)\n' % re.escape(key), as_content)
             if not m:
-                raise ValueError('Cannot find %s in %s' % (key, testfile))
-            return json.loads(m.group(1))
+                raise ValueError(f'Cannot find {key} in {testfile}')
+            return json.loads(m[1])
 
         input_args = _find_spec('input')
         output = _find_spec('output')
@@ -69,7 +69,7 @@ def _make_testfunc(testfile):
         res = func(input_args)
         self.assertEqual(res, output)
 
-    test_func.__name__ = str('test_swf_' + test_id)
+    test_func.__name__ = str(f'test_swf_{test_id}')
     setattr(TestSWFInterpreter, test_func.__name__, test_func)
 
 

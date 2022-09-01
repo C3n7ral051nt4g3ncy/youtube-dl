@@ -59,7 +59,7 @@ class HlsFD(FragmentFD):
 
     def real_download(self, filename, info_dict):
         man_url = info_dict['url']
-        self.to_screen('[%s] Downloading m3u8 manifest' % self.FD_NAME)
+        self.to_screen(f'[{self.FD_NAME}] Downloading m3u8 manifest')
 
         urlh = self.ydl.urlopen(self._prepare_url(info_dict, man_url))
         man_url = urlh.geturl()
@@ -165,8 +165,7 @@ class HlsFD(FragmentFD):
                             media_sequence += 1
                             self.report_skip_fragment(frag_index)
                             continue
-                        self.report_error(
-                            'giving up after %s fragment retries' % fragment_retries)
+                        self.report_error(f'giving up after {fragment_retries} fragment retries')
                         return False
                     if decrypt_info['METHOD'] == 'AES-128':
                         iv = decrypt_info.get('IV') or compat_struct_pack('>8xq', media_sequence)

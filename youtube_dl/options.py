@@ -21,15 +21,21 @@ from .version import __version__
 
 
 def _hide_login_info(opts):
-    PRIVATE_OPTS = set(['-p', '--password', '-u', '--username', '--video-password', '--ap-password', '--ap-username'])
+    PRIVATE_OPTS = {
+        '-p',
+        '--password',
+        '-u',
+        '--username',
+        '--video-password',
+        '--ap-password',
+        '--ap-username',
+    }
+
     eqre = re.compile('^(?P<key>' + ('|'.join(re.escape(po) for po in PRIVATE_OPTS)) + ')=.+$')
 
     def _scrub_eq(o):
         m = eqre.match(o)
-        if m:
-            return m.group('key') + '=PRIVATE'
-        else:
-            return o
+        return m['key'] + '=PRIVATE' if m else o
 
     opts = list(map(_scrub_eq, opts))
     for idx, opt in enumerate(opts):

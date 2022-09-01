@@ -23,9 +23,14 @@ def format_size(bytes):
 total_bytes = 0
 
 for page in itertools.count(1):
-    releases = json.loads(compat_urllib_request.urlopen(
-        'https://api.github.com/repos/ytdl-org/youtube-dl/releases?page=%s' % page
-    ).read().decode('utf-8'))
+    releases = json.loads(
+        compat_urllib_request.urlopen(
+            f'https://api.github.com/repos/ytdl-org/youtube-dl/releases?page={page}'
+        )
+        .read()
+        .decode('utf-8')
+    )
+
 
     if not releases:
         break
@@ -35,13 +40,16 @@ for page in itertools.count(1):
         for asset in release['assets']:
             asset_name = asset['name']
             total_bytes += asset['download_count'] * asset['size']
-            if all(not re.match(p, asset_name) for p in (
+            if any(
+                re.match(p, asset_name)
+                for p in (
                     r'^youtube-dl$',
                     r'^youtube-dl-\d{4}\.\d{2}\.\d{2}(?:\.\d+)?\.tar\.gz$',
-                    r'^youtube-dl\.exe$')):
-                continue
-            compat_print(
-                ' %s size: %s downloads: %d'
-                % (asset_name, format_size(asset['size']), asset['download_count']))
+                    r'^youtube-dl\.exe$',
+                )
+            ):
+                compat_print(
+                    ' %s size: %s downloads: %d'
+                    % (asset_name, format_size(asset['size']), asset['download_count']))
 
-compat_print('total downloads traffic: %s' % format_size(total_bytes))
+compat_print(f'total downloads traffic: {format_size(total_bytes)}')

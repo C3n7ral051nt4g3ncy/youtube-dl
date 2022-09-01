@@ -33,8 +33,8 @@ def update_self(to_screen, verbose, opener):
     """Update the program file with the latest version from the repository"""
 
     UPDATE_URL = 'https://yt-dl.org/update/'
-    VERSION_URL = UPDATE_URL + 'LATEST_VERSION'
-    JSON_URL = UPDATE_URL + 'versions.json'
+    VERSION_URL = f'{UPDATE_URL}LATEST_VERSION'
+    JSON_URL = f'{UPDATE_URL}versions.json'
     UPDATES_RSA_KEY = (0x9d60ee4d8f805312fdb15a62f87b95bd66177b91df176765d13514a0f1754bcd2057295c5b6f1d35daa6742c3ffc9a82d3e118861c207995a8031e151d863c9927e304576bc80692bc8e094896fcf11b66f3e29e04e3a71e9a11558558acea1840aec37fc396fb6b65dc81a1c4144e03bd1c011de62e3f1357b327d08426fe93, 65537)
 
     if not isinstance(globals().get('__loader__'), zipimporter) and not hasattr(sys, 'frozen'):
@@ -50,7 +50,7 @@ def update_self(to_screen, verbose, opener):
         to_screen('ERROR: can\'t find the current version. Please try again later.')
         return
     if newversion == __version__:
-        to_screen('youtube-dl is up-to-date (' + __version__ + ')')
+        to_screen(f'youtube-dl is up-to-date ({__version__})')
         return
 
     # Download and check versions info
@@ -75,11 +75,12 @@ def update_self(to_screen, verbose, opener):
 
     def version_tuple(version_str):
         return tuple(map(int, version_str.split('.')))
+
     if version_tuple(__version__) >= version_tuple(version_id):
-        to_screen('youtube-dl is up to date (%s)' % __version__)
+        to_screen(f'youtube-dl is up to date ({__version__})')
         return
 
-    to_screen('Updating to version ' + version_id + ' ...')
+    to_screen(f'Updating to version {version_id} ...')
     version = versions_info['versions'][version_id]
 
     print_notes(to_screen, versions_info['versions'])
@@ -90,7 +91,7 @@ def update_self(to_screen, verbose, opener):
     filename = compat_realpath(sys.executable if hasattr(sys, 'frozen') else sys.argv[0])
 
     if not os.access(filename, os.W_OK):
-        to_screen('ERROR: no write permissions on %s' % filename)
+        to_screen(f'ERROR: no write permissions on {filename}')
         return
 
     # Py2EXE
@@ -98,7 +99,7 @@ def update_self(to_screen, verbose, opener):
         exe = filename
         directory = os.path.dirname(exe)
         if not os.access(directory, os.W_OK):
-            to_screen('ERROR: no write permissions on %s' % directory)
+            to_screen(f'ERROR: no write permissions on {directory}')
             return
 
         try:
@@ -117,7 +118,7 @@ def update_self(to_screen, verbose, opener):
             return
 
         try:
-            with open(exe + '.new', 'wb') as outf:
+            with open(f'{exe}.new', 'wb') as outf:
                 outf.write(newcontent)
         except (IOError, OSError):
             if verbose:
@@ -145,7 +146,6 @@ start /b "" cmd /c del "%%~f0"&exit /b"
             to_screen('ERROR: unable to overwrite current version')
             return
 
-    # Zip unix package
     elif isinstance(globals().get('__loader__'), zipimporter):
         try:
             urlh = opener.open(version['bin'][0])
@@ -183,8 +183,7 @@ def get_notes(versions, fromVersion):
 
 
 def print_notes(to_screen, versions, fromVersion=__version__):
-    notes = get_notes(versions, fromVersion)
-    if notes:
+    if notes := get_notes(versions, fromVersion):
         to_screen('PLEASE NOTE:')
         for note in notes:
             to_screen(note)

@@ -31,7 +31,7 @@ _OPERATORS = [
     ('/', operator.truediv),
     ('*', operator.mul),
 ]
-_ASSIGN_OPERATORS = [(op + '=', opfunc) for op, opfunc in _OPERATORS]
+_ASSIGN_OPERATORS = [(f'{op}=', opfunc) for op, opfunc in _OPERATORS]
 _ASSIGN_OPERATORS.append(('=', (lambda cur, right: right)))
 
 _NAME_RE = r'[a-zA-Z_$][a-zA-Z_$0-9]*'
@@ -73,14 +73,13 @@ class LocalNameSpace(MutableMapping):
 
     def __iter__(self):
         for scope in self.stack:
-            for scope_item in iter(scope):
-                yield scope_item
+            yield from iter(scope)
 
     def __len__(self, key):
         return len(iter(self))
 
     def __repr__(self):
-        return 'LocalNameSpace%s' % (self.stack, )
+        return f'LocalNameSpace{self.stack}'
 
 
 class JSInterpreter(object):
@@ -94,7 +93,7 @@ class JSInterpreter(object):
 
     def _named_object(self, namespace, obj):
         self.__named_object_counter += 1
-        name = '__youtube_dl_jsinterp_obj%s' % (self.__named_object_counter, )
+        name = f'__youtube_dl_jsinterp_obj{self.__named_object_counter}'
         namespace[name] = obj
         return name
 
@@ -142,17 +141,14 @@ class JSInterpreter(object):
 
         should_abort = False
         stmt = stmt.lstrip()
-        stmt_m = re.match(r'var\s', stmt)
-        if stmt_m:
-            expr = stmt[len(stmt_m.group(0)):]
+        if stmt_m := re.match(r'var\s', stmt):
+            expr = stmt[len(stmt_m[0]):]
+        elif return_m := re.match(r'return(?:\s+|$)', stmt):
+            expr = stmt[len(return_m[0]):]
+            should_abort = True
         else:
-            return_m = re.match(r'return(?:\s+|$)', stmt)
-            if return_m:
-                expr = stmt[len(return_m.group(0)):]
-                should_abort = True
-            else:
-                # Try interpreting it as an expression
-                expr = stmt
+            # Try interpreting it as an expression
+            expr = stmt
 
         v = self.interpret_expression(expr, local_vars, allow_recursion)
         return v, should_abort

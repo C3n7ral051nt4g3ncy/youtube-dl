@@ -47,11 +47,7 @@ def filter_options(readme):
     in_options = False
     for line in readme.split('\n'):
         if line.startswith('# '):
-            if line[2:].startswith('OPTIONS'):
-                in_options = True
-            else:
-                in_options = False
-
+            in_options = bool(line[2:].startswith('OPTIONS'))
         if in_options:
             if line.lstrip().startswith('-'):
                 split = re.split(r'\s{2,}', line.lstrip())
@@ -62,7 +58,7 @@ def filter_options(readme):
                     split_option = option.split(' ')
 
                     if not split_option[-1].startswith('-'):  # metavar
-                        option = ' '.join(split_option[:-1] + ['*%s*' % split_option[-1]])
+                        option = ' '.join(split_option[:-1] + [f'*{split_option[-1]}*'])
 
                     # Pandoc's definition_lists. See http://pandoc.org/README.html
                     # for more information.

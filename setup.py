@@ -70,7 +70,10 @@ else:
         resfiles = []
         for fn in files:
             if not os.path.exists(fn):
-                warnings.warn('Skipping file %s since it is not present. Type  make  to build all automatically generated files.' % fn)
+                warnings.warn(
+                    f'Skipping file {fn} since it is not present. Type  make  to build all automatically generated files.'
+                )
+
             else:
                 resfiles.append(fn)
         data_files.append((dirname, resfiles))

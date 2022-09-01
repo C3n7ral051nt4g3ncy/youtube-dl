@@ -198,9 +198,7 @@ def aes_decrypt_text(data, password, key_size_bytes):
             return temp
 
     decrypted_data = aes_ctr_decrypt(cipher, key, Counter())
-    plaintext = intlist_to_bytes(decrypted_data)
-
-    return plaintext
+    return intlist_to_bytes(decrypted_data)
 
 
 RCON = (0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36)
@@ -334,16 +332,20 @@ def mix_columns_inv(data):
 def shift_rows(data):
     data_shifted = []
     for column in range(4):
-        for row in range(4):
-            data_shifted.append(data[((column + row) & 0b11) * 4 + row])
+        data_shifted.extend(
+            data[((column + row) & 0b11) * 4 + row] for row in range(4)
+        )
+
     return data_shifted
 
 
 def shift_rows_inv(data):
     data_shifted = []
     for column in range(4):
-        for row in range(4):
-            data_shifted.append(data[((column - row) & 0b11) * 4 + row])
+        data_shifted.extend(
+            data[((column - row) & 0b11) * 4 + row] for row in range(4)
+        )
+
     return data_shifted
 
 

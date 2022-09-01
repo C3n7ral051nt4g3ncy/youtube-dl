@@ -18,7 +18,7 @@ class NiconicoDmcFD(FileDownloader):
     FD_NAME = 'niconico_dmc'
 
     def real_download(self, filename, info_dict):
-        self.to_screen('[%s] Downloading from DMC' % self.FD_NAME)
+        self.to_screen(f'[{self.FD_NAME}] Downloading from DMC')
 
         ie = NiconicoIE(self.ydl)
         info_dict, heartbeat_info_dict = ie._get_heartbeat_info(info_dict)
@@ -28,7 +28,7 @@ class NiconicoDmcFD(FileDownloader):
             fd.add_progress_hook(ph)
 
         if not threading:
-            self.to_screen('[%s] Threading for Heartbeat not available' % self.FD_NAME)
+            self.to_screen(f'[{self.FD_NAME}] Threading for Heartbeat not available')
             return fd.real_download(filename, info_dict)
 
         success = download_complete = False
@@ -44,7 +44,7 @@ class NiconicoDmcFD(FileDownloader):
             try:
                 self.ydl.urlopen(request).read()
             except Exception:
-                self.to_screen('[%s] Heartbeat failed' % self.FD_NAME)
+                self.to_screen(f'[{self.FD_NAME}] Heartbeat failed')
 
             with heartbeat_lock:
                 if not download_complete:

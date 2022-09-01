@@ -76,12 +76,10 @@ class TestDownload(unittest.TestCase):
 
         def strclass(cls):
             """From 2.7's unittest; 2.6 had _strclass so we can't import it."""
-            return '%s.%s' % (cls.__module__, cls.__name__)
+            return f'{cls.__module__}.{cls.__name__}'
 
         add_ie = getattr(self, self._testMethodName).add_ie
-        return '%s (%s)%s:' % (self._testMethodName,
-                               strclass(self.__class__),
-                               ' [%s]' % add_ie if add_ie else '')
+        return f"{self._testMethodName} ({strclass(self.__class__)}){f' [{add_ie}]' if add_ie else ''}:"
 
     def setUp(self):
         self.defs = defs
@@ -99,7 +97,8 @@ def generator(test_case, tname):
             'playlist', [] if is_playlist else [test_case])
 
         def print_skipping(reason):
-            print('Skipping %s: %s' % (test_case['name'], reason))
+            print(f"Skipping {test_case['name']}: {reason}")
+
         if not ie.working():
             print_skipping('IE marked as not _WORKING')
             return
@@ -114,11 +113,11 @@ def generator(test_case, tname):
             return
         for other_ie in other_ies:
             if not other_ie.working():
-                print_skipping('test depends on %sIE, marked as not WORKING' % other_ie.ie_key())
+                print_skipping(f'test depends on {other_ie.ie_key()}IE, marked as not WORKING')
                 return
 
         params = get_params(test_case.get('params', {}))
-        params['outtmpl'] = tname + '_' + params['outtmpl']
+        params['outtmpl'] = f'{tname}_' + params['outtmpl']
         if is_playlist and 'playlist' not in test_case:
             params.setdefault('extract_flat', 'in_playlist')
             params.setdefault('playlistend', test_case.get('playlist_mincount'))
@@ -131,6 +130,7 @@ def generator(test_case, tname):
         def _hook(status):
             if status['status'] == 'finished':
                 finished_hook_called.add(status['filename'])
+
         ydl.add_progress_hook(_hook)
         expect_warnings(ydl, test_case.get('expected_warnings', []))
 
@@ -145,8 +145,9 @@ def generator(test_case, tname):
             for tc in tcs:
                 tc_filename = get_tc_filename(tc)
                 try_rm(tc_filename)
-                try_rm(tc_filename + '.part')
-                try_rm(os.path.splitext(tc_filename)[0] + '.info.json')
+                try_rm(f'{tc_filename}.part')
+                try_rm(f'{os.path.splitext(tc_filename)[0]}.info.json')
+
         try_rm_tcs_files()
         try:
             try_num = 1
@@ -160,11 +161,19 @@ def generator(test_case, tname):
                         force_generic_extractor=params.get('force_generic_extractor', False))
                 except (DownloadError, ExtractorError) as err:
                     # Check if the exception is not a network related one
-                    if not err.exc_info[0] in (compat_urllib_error.URLError, socket.timeout, UnavailableVideoError, compat_http_client.BadStatusLine) or (err.exc_info[0] == compat_HTTPError and err.exc_info[1].code == 503):
+                    if err.exc_info[0] not in (
+                        compat_urllib_error.URLError,
+                        socket.timeout,
+                        UnavailableVideoError,
+                        compat_http_client.BadStatusLine,
+                    ) or (
+                        err.exc_info[0] == compat_HTTPError
+                        and err.exc_info[1].code == 503
+                    ):
                         raise
 
                     if try_num == RETRIES:
-                        report_warning('%s failed due to network errors, skipping...' % tname)
+                        report_warning(f'{tname} failed due to network errors, skipping...')
                         return
 
                     print('Retrying: {0} failed tries\n\n##########\n\n'.format(try_num))
@@ -212,7 +221,7 @@ def generator(test_case, tname):
                 # Now, check downloaded file consistency
                 tc_filename = get_tc_filename(tc)
                 if not test_case.get('params', {}).get('skip_download', False):
-                    self.assertTrue(os.path.exists(tc_filename), msg='Missing file ' + tc_filename)
+                    self.assertTrue(os.path.exists(tc_filename), msg=f'Missing file {tc_filename}')
                     self.assertTrue(tc_filename in finished_hook_called)
                     expected_minsize = tc.get('file_minsize', 10000)
                     if expected_minsize is not None:
@@ -229,10 +238,12 @@ def generator(test_case, tname):
                         self.assertEqual(tc['md5'], md5_for_file)
                 # Finally, check test cases' data again but this time against
                 # extracted data from info JSON file written during processing
-                info_json_fn = os.path.splitext(tc_filename)[0] + '.info.json'
+                info_json_fn = f'{os.path.splitext(tc_filename)[0]}.info.json'
                 self.assertTrue(
                     os.path.exists(info_json_fn),
-                    'Missing info file %s' % info_json_fn)
+                    f'Missing info file {info_json_fn}',
+                )
+
                 with io.open(info_json_fn, encoding='utf-8') as infof:
                     info_dict = json.load(infof)
                 expect_info_dict(self, info_dict, tc.get('info_dict', {}))
@@ -248,7 +259,7 @@ def generator(test_case, tname):
 
 
 # And add them to TestDownload
-for n, test_case in enumerate(defs):
+for test_case in defs:
     tname = 'test_' + str(test_case['name'])
     i = 1
     while hasattr(TestDownload, tname):

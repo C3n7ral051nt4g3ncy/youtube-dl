@@ -20,8 +20,8 @@ from ..utils import (
 class AdobeTVBaseIE(InfoExtractor):
     def _call_api(self, path, video_id, query, note=None):
         return self._download_json(
-            'http://tv.adobe.com/api/v4/' + path,
-            video_id, note, query=query)['data']
+            f'http://tv.adobe.com/api/v4/{path}', video_id, note, query=query
+        )['data']
 
     def _parse_subtitles(self, video_data, url_key):
         subtitles = {}
@@ -54,15 +54,10 @@ class AdobeTVBaseIE(InfoExtractor):
                 'width': int_or_none(source.get('width')),
                 'url': source_url,
             }
-            original_filename = source.get('original_filename')
-            if original_filename:
+            if original_filename := source.get('original_filename'):
                 if not (f.get('height') and f.get('width')):
-                    mobj = re.search(r'_(\d+)x(\d+)', original_filename)
-                    if mobj:
-                        f.update({
-                            'height': int(mobj.group(2)),
-                            'width': int(mobj.group(1)),
-                        })
+                    if mobj := re.search(r'_(\d+)x(\d+)', original_filename):
+                        f |= {'height': int(mobj[2]), 'width': int(mobj[1])}
                 if original_filename.startswith('s3://') and not s3_extracted:
                     formats.append({
                         'format_id': 'original',
@@ -108,7 +103,9 @@ class AdobeTVEmbedIE(AdobeTVBaseIE):
         video_id = self._match_id(url)
 
         video_data = self._call_api(
-            'episode/' + video_id, video_id, {'disclosure': 'standard'})[0]
+            f'episode/{video_id}', video_id, {'disclosure': 'standard'}
+        )[0]
+
         return self._parse_video_data(video_data)
 
 
@@ -258,17 +255,15 @@ class AdobeTVVideoIE(AdobeTVBaseIE):
         formats = []
         sources = video_data.get('sources') or []
         for source in sources:
-            source_src = source.get('src')
-            if not source_src:
-                continue
-            formats.append({
-                'filesize': int_or_none(source.get('kilobytes') or None, invscale=1000),
-                'format_id': '-'.join(filter(None, [source.get('format'), source.get('label')])),
-                'height': int_or_none(source.get('height') or None),
-                'tbr': int_or_none(source.get('bitrate') or None),
-                'width': int_or_none(source.get('width') or None),
-                'url': source_src,
-            })
+            if source_src := source.get('src'):
+                formats.append({
+                    'filesize': int_or_none(source.get('kilobytes') or None, invscale=1000),
+                    'format_id': '-'.join(filter(None, [source.get('format'), source.get('label')])),
+                    'height': int_or_none(source.get('height') or None),
+                    'tbr': int_or_none(source.get('bitrate') or None),
+                    'width': int_or_none(source.get('width') or None),
+                    'url': source_src,
+                })
         self._sort_formats(formats)
 
         # For both metadata and downloaded files the duration varies among

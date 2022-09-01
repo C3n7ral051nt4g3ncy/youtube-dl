@@ -58,9 +58,7 @@ class _ScopeDict(dict):
         self.avm_class = avm_class
 
     def __repr__(self):
-        return '%s__Scope(%s)' % (
-            self.avm_class.name,
-            super(_ScopeDict, self).__repr__())
+        return f'{self.avm_class.name}__Scope({super(_ScopeDict, self).__repr__()})'
 
 
 class _AVMClass(object):
@@ -71,7 +69,7 @@ class _AVMClass(object):
         self.method_idxs = {}
         self.methods = {}
         self.method_pyfunctions = {}
-        self.static_properties = static_properties if static_properties else {}
+        self.static_properties = static_properties or {}
 
         self.variables = _ScopeDict(self)
         self.constants = {}
@@ -80,13 +78,11 @@ class _AVMClass(object):
         return _AVMClass_Object(self)
 
     def __repr__(self):
-        return '_AVMClass(%s)' % (self.name)
+        return f'_AVMClass({self.name})'
 
     def register_methods(self, methods):
         self.method_names.update(methods.items())
-        self.method_idxs.update(dict(
-            (idx, name)
-            for name, idx in methods.items()))
+        self.method_idxs.update({idx: name for name, idx in methods.items()})
 
 
 class _Multiname(object):
@@ -150,8 +146,7 @@ def _read_bytes(count, reader):
 
 def _read_byte(reader):
     resb = _read_bytes(1, reader=reader)
-    res = compat_struct_unpack('<B', resb)[0]
-    return res
+    return compat_struct_unpack('<B', resb)[0]
 
 
 StringClass = _AVMClass('(no name idx)', 'String')
@@ -369,7 +364,7 @@ class SWFInterpreter(object):
                     avm_class.constants.update(trait_constants)
 
         assert len(classes) == class_count
-        self._classes_by_name = dict((c.name, c) for c in classes)
+        self._classes_by_name = {c.name: c for c in classes}
 
         for avm_class in classes:
             avm_class.cinit_idx = u30()
@@ -444,8 +439,7 @@ class SWFInterpreter(object):
         if func_name in self._classes_by_name:
             return self._classes_by_name[func_name].make_object()
         if func_name not in avm_class.methods:
-            raise ExtractorError('Cannot find function %s.%s' % (
-                avm_class.name, func_name))
+            raise ExtractorError(f'Cannot find function {avm_class.name}.{func_name}')
         m = avm_class.methods[func_name]
 
         def resfunc(args):
@@ -538,16 +532,11 @@ class SWFInterpreter(object):
                             assert len(args) == 1
                             assert isinstance(args[0], (
                                 int, compat_str, _Undefined))
-                            if args[0] == undefined:
-                                res = 'undefined'
-                            else:
-                                res = compat_str(args[0])
+                            res = 'undefined' if args[0] == undefined else compat_str(args[0])
                             stack.append(res)
                             continue
                         else:
-                            raise NotImplementedError(
-                                'Function String.%s is not yet implemented'
-                                % mname)
+                            raise NotImplementedError(f'Function String.{mname} is not yet implemented')
                     elif isinstance(obj, _AVMClass_Object):
                         func = self.extract_function(obj.avm_class, mname)
                         res = func(args)
@@ -570,15 +559,12 @@ class SWFInterpreter(object):
                         if mname == 'split':
                             assert len(args) == 1
                             assert isinstance(args[0], compat_str)
-                            if args[0] == '':
-                                res = list(obj)
-                            else:
-                                res = obj.split(args[0])
+                            res = list(obj) if args[0] == '' else obj.split(args[0])
                             stack.append(res)
                             continue
                         elif mname == 'charCodeAt':
                             assert len(args) <= 1
-                            idx = 0 if len(args) == 0 else args[0]
+                            idx = args[0] if args else 0
                             assert isinstance(idx, int)
                             res = ord(obj[idx])
                             stack.append(res)
@@ -728,7 +714,7 @@ class SWFInterpreter(object):
                             continue
 
                         assert isinstance(obj, (dict, _ScopeDict)),\
-                            'Accessing member %r on %r' % (pname, obj)
+                                'Accessing member %r on %r' % (pname, obj)
                         res = obj.get(pname, undefined)
                         stack.append(res)
                     else:  # Assume attribute access

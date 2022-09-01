@@ -13,9 +13,14 @@ year = str(datetime.datetime.now().year)
 for fn in glob.glob('*.html*'):
     with io.open(fn, encoding='utf-8') as f:
         content = f.read()
-    newc = re.sub(r'(?P<copyright>Copyright © 2011-)(?P<year>[0-9]{4})', 'Copyright © 2011-' + year, content)
+    newc = re.sub(
+        r'(?P<copyright>Copyright © 2011-)(?P<year>[0-9]{4})',
+        f'Copyright © 2011-{year}',
+        content,
+    )
+
     if content != newc:
-        tmpFn = fn + '.part'
+        tmpFn = f'{fn}.part'
         with io.open(tmpFn, 'wt', encoding='utf-8') as outf:
             outf.write(newc)
         os.rename(tmpFn, fn)

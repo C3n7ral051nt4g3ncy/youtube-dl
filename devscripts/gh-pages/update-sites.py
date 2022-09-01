@@ -17,15 +17,15 @@ def main():
 
     ie_htmls = []
     for ie in youtube_dl.list_extractors(age_limit=None):
-        ie_html = '<b>{}</b>'.format(ie.IE_NAME)
+        ie_html = f'<b>{ie.IE_NAME}</b>'
         ie_desc = getattr(ie, 'IE_DESC', None)
         if ie_desc is False:
             continue
         elif ie_desc is not None:
-            ie_html += ': {}'.format(ie.IE_DESC)
+            ie_html += f': {ie.IE_DESC}'
         if not ie.working():
             ie_html += ' (Currently broken)'
-        ie_htmls.append('<li>{}</li>'.format(ie_html))
+        ie_htmls.append(f'<li>{ie_html}</li>')
 
     template = template.replace('@SITES@', textwrap.indent('\n'.join(ie_htmls), '\t'))
 

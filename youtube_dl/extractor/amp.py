@@ -21,12 +21,12 @@ class AMPIE(InfoExtractor):
             'Unable to download Akamai AMP feed')
         item = feed.get('channel', {}).get('item')
         if not item:
-            raise ExtractorError('%s said: %s' % (self.IE_NAME, feed['error']))
+            raise ExtractorError(f"{self.IE_NAME} said: {feed['error']}")
 
         video_id = item['guid']
 
         def get_media_node(name, default=None):
-            media_name = 'media-%s' % name
+            media_name = f'media-{name}'
             media_group = item.get('media-group') or item
             return media_group.get(media_name) or item.get(media_name) or item.get(name, default)
 
@@ -72,9 +72,15 @@ class AMPIE(InfoExtractor):
                 continue
             ext = mimetype2ext(media.get('type')) or determine_ext(media_url)
             if ext == 'f4m':
-                formats.extend(self._extract_f4m_formats(
-                    media_url + '?hdcore=3.4.0&plugin=aasp-3.4.0.132.124',
-                    video_id, f4m_id='hds', fatal=False))
+                formats.extend(
+                    self._extract_f4m_formats(
+                        f'{media_url}?hdcore=3.4.0&plugin=aasp-3.4.0.132.124',
+                        video_id,
+                        f4m_id='hds',
+                        fatal=False,
+                    )
+                )
+
             elif ext == 'm3u8':
                 formats.extend(self._extract_m3u8_formats(
                     media_url, video_id, 'mp4', m3u8_id='hls', fatal=False))

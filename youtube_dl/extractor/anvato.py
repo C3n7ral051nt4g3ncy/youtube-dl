@@ -238,18 +238,27 @@ class AnvatoIE(InfoExtractor):
         if self.__server_time is not None:
             return self.__server_time
 
-        self.__server_time = int(self._download_json(
-            self._api_prefix(access_key) + 'server_time?anvack=' + access_key, video_id,
-            note='Fetching server time')['server_time'])
+        self.__server_time = int(
+            self._download_json(
+                f'{self._api_prefix(access_key)}server_time?anvack={access_key}',
+                video_id,
+                note='Fetching server time',
+            )['server_time']
+        )
+
 
         return self.__server_time
 
     def _api_prefix(self, access_key):
-        return 'https://tkx2-%s.anvato.net/rest/v2/' % ('prod' if 'prod' in access_key else 'stage')
+        return f"https://tkx2-{'prod' if 'prod' in access_key else 'stage'}.anvato.net/rest/v2/"
 
     def _get_video_json(self, access_key, video_id):
         # See et() in anvplayer.min.js, which is an alias of getVideoJSON()
-        video_data_url = self._api_prefix(access_key) + 'mcp/video/%s?anvack=%s' % (video_id, access_key)
+        video_data_url = (
+            self._api_prefix(access_key)
+            + f'mcp/video/{video_id}?anvack={access_key}'
+        )
+
         server_time = self._server_time(access_key, video_id)
         input_data = '%d~%s~%s' % (server_time, md5_text(video_data_url), md5_text(server_time))
 
@@ -261,10 +270,16 @@ class AnvatoIE(InfoExtractor):
         api = {
             'anvrid': anvrid,
             'anvts': server_time,
+            'anvstk': md5_text(
+                '%s|%s|%d|%s'
+                % (
+                    access_key,
+                    anvrid,
+                    server_time,
+                    self._ANVACK_TABLE.get(access_key, self._API_KEY),
+                )
+            ),
         }
-        api['anvstk'] = md5_text('%s|%s|%d|%s' % (
-            access_key, anvrid, server_time,
-            self._ANVACK_TABLE.get(access_key, self._API_KEY)))
 
         return self._download_json(
             video_data_url, video_id, transform_source=strip_jsonp,
@@ -291,10 +306,11 @@ class AnvatoIE(InfoExtractor):
             }
 
             if media_format == 'm3u8' and tbr is not None:
-                a_format.update({
+                a_format |= {
                     'format_id': '-'.join(filter(None, ['hls', compat_str(tbr)])),
                     'ext': 'mp4',
-                })
+                }
+
             elif media_format == 'm3u8-variant' or ext == 'm3u8':
                 formats.extend(self._extract_m3u8_formats(
                     video_url, video_id, 'mp4', entry_protocol='m3u8_native',
@@ -303,10 +319,11 @@ class AnvatoIE(InfoExtractor):
             elif ext == 'mp3' or media_format == 'mp3':
                 a_format['vcodec'] = 'none'
             else:
-                a_format.update({
+                a_format |= {
                     'width': int_or_none(published_url.get('width')),
                     'height': int_or_none(published_url.get('height')),
-                })
+                }
+
             formats.append(a_format)
 
         self._sort_formats(formats)
@@ -348,15 +365,19 @@ class AnvatoIE(InfoExtractor):
                 continue
             access_key = anvplayer_data.get('accessKey')
             if not access_key:
-                mcp = anvplayer_data.get('mcp')
-                if mcp:
+                if mcp := anvplayer_data.get('mcp'):
                     access_key = AnvatoIE._MCP_TO_ACCESS_KEY_TABLE.get(
                         mcp.lower())
             if not access_key:
                 continue
-            entries.append(ie.url_result(
-                'anvato:%s:%s' % (access_key, video), ie=AnvatoIE.ie_key(),
-                video_id=video))
+            entries.append(
+                ie.url_result(
+                    f'anvato:{access_key}:{video}',
+                    ie=AnvatoIE.ie_key(),
+                    video_id=video,
+                )
+            )
+
         return entries
 
     def _extract_anvato_videos(self, webpage, video_id):

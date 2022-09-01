@@ -56,11 +56,11 @@ class HttpFD(FileDownloader):
         ctx.start_time = time.time()
         ctx.chunk_size = None
 
-        if self.params.get('continuedl', True):
-            # Establish possible resume length
-            if os.path.isfile(encodeFilename(ctx.tmpfilename)):
-                ctx.resume_len = os.path.getsize(
-                    encodeFilename(ctx.tmpfilename))
+        if self.params.get('continuedl', True) and os.path.isfile(
+            encodeFilename(ctx.tmpfilename)
+        ):
+            ctx.resume_len = os.path.getsize(
+                encodeFilename(ctx.tmpfilename))
 
         ctx.is_resume = ctx.resume_len > 0
 
@@ -108,7 +108,7 @@ class HttpFD(FileDownloader):
             try:
                 try:
                     ctx.data = self.ydl.urlopen(request)
-                except (compat_urllib_error.URLError, ) as err:
+                except compat_urllib_error.URLError as err:
                     # reason may not be available, e.g. for urllib2.HTTPError on python 2.6
                     reason = getattr(err, 'reason', None)
                     if isinstance(reason, socket.timeout):
@@ -124,20 +124,21 @@ class HttpFD(FileDownloader):
                     if content_range:
                         content_range_m = re.search(r'bytes (\d+)-(\d+)?(?:/(\d+))?', content_range)
                         # Content-Range is present and matches requested Range, resume is possible
-                        if content_range_m:
-                            if range_start == int(content_range_m.group(1)):
-                                content_range_end = int_or_none(content_range_m.group(2))
-                                content_len = int_or_none(content_range_m.group(3))
-                                accept_content_len = (
-                                    # Non-chunked download
-                                    not ctx.chunk_size
-                                    # Chunked download and requested piece or
-                                    # its part is promised to be served
-                                    or content_range_end == range_end
-                                    or content_len < range_end)
-                                if accept_content_len:
-                                    ctx.data_len = content_len
-                                    return
+                        if content_range_m and range_start == int(
+                            content_range_m[1]
+                        ):
+                            content_range_end = int_or_none(content_range_m[2])
+                            content_len = int_or_none(content_range_m[3])
+                            accept_content_len = (
+                                # Non-chunked download
+                                not ctx.chunk_size
+                                # Chunked download and requested piece or
+                                # its part is promised to be served
+                                or content_range_end == range_end
+                                or content_len < range_end)
+                            if accept_content_len:
+                                ctx.data_len = content_len
+                                return
                     # Content-Range is either not present or invalid. Assuming remote webserver is
                     # trying to send the whole file, resume is not possible, so wiping the local file
                     # and performing entire redownload
@@ -146,7 +147,7 @@ class HttpFD(FileDownloader):
                     ctx.open_mode = 'wb'
                 ctx.data_len = int_or_none(ctx.data.info().get('Content-length', None))
                 return
-            except (compat_urllib_error.HTTPError, ) as err:
+            except compat_urllib_error.HTTPError as err:
                 if err.code == 416:
                     # Unable to resume (requested range not satisfiable)
                     try:
@@ -154,7 +155,7 @@ class HttpFD(FileDownloader):
                         ctx.data = self.ydl.urlopen(
                             sanitized_Request(url, None, headers))
                         content_length = ctx.data.info()['Content-Length']
-                    except (compat_urllib_error.HTTPError, ) as err:
+                    except compat_urllib_error.HTTPError as err:
                         if err.code < 500 or err.code >= 600:
                             raise
                     else:
@@ -262,20 +263,20 @@ class HttpFD(FileDownloader):
                         ctx.filename = self.undo_temp_name(ctx.tmpfilename)
                         self.report_destination(ctx.filename)
                     except (OSError, IOError) as err:
-                        self.report_error('unable to open for writing: %s' % str(err))
+                        self.report_error(f'unable to open for writing: {str(err)}')
                         return False
 
                     if self.params.get('xattr_set_filesize', False) and data_len is not None:
                         try:
                             write_xattr(ctx.tmpfilename, 'user.ytdl.filesize', str(data_len).encode('utf-8'))
                         except (XAttrUnavailableError, XAttrMetadataError) as err:
-                            self.report_error('unable to set filesize xattr: %s' % str(err))
+                            self.report_error(f'unable to set filesize xattr: {str(err)}')
 
                 try:
                     ctx.stream.write(data_block)
                 except (IOError, OSError) as err:
                     self.to_stderr('\n')
-                    self.report_error('unable to write data: %s' % str(err))
+                    self.report_error(f'unable to write data: {str(err)}')
                     return False
 
                 # Apply rate limit
@@ -360,5 +361,5 @@ class HttpFD(FileDownloader):
             except SucceedDownload:
                 return True
 
-        self.report_error('giving up after %s retries' % retries)
+        self.report_error(f'giving up after {retries} retries')
         return False

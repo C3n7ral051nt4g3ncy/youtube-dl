@@ -68,29 +68,41 @@ class ABCIE(InfoExtractor):
             r'inline(?P<type>Video|Audio|YouTube)Data\.push\((?P<json_data>[^)]+)\);',
             webpage)
         if mobj is None:
-            expired = self._html_search_regex(r'(?s)class="expired-(?:video|audio)".+?<span>(.+?)</span>', webpage, 'expired', None)
-            if expired:
-                raise ExtractorError('%s said: %s' % (self.IE_NAME, expired), expected=True)
+            if expired := self._html_search_regex(
+                r'(?s)class="expired-(?:video|audio)".+?<span>(.+?)</span>',
+                webpage,
+                'expired',
+                None,
+            ):
+                raise ExtractorError(f'{self.IE_NAME} said: {expired}', expected=True)
             raise ExtractorError('Unable to extract video urls')
 
         urls_info = self._parse_json(
-            mobj.group('json_data'), video_id, transform_source=js_to_json)
+            mobj['json_data'], video_id, transform_source=js_to_json
+        )
+
 
         if not isinstance(urls_info, list):
             urls_info = [urls_info]
 
-        if mobj.group('type') == 'YouTube':
+        if mobj['type'] == 'YouTube':
             return self.playlist_result([
                 self.url_result(url_info['url']) for url_info in urls_info])
 
-        formats = [{
-            'url': url_info['url'],
-            'vcodec': url_info.get('codec') if mobj.group('type') == 'Video' else 'none',
-            'width': int_or_none(url_info.get('width')),
-            'height': int_or_none(url_info.get('height')),
-            'tbr': int_or_none(url_info.get('bitrate')),
-            'filesize': int_or_none(url_info.get('filesize')),
-        } for url_info in urls_info]
+        formats = [
+            {
+                'url': url_info['url'],
+                'vcodec': url_info.get('codec')
+                if mobj['type'] == 'Video'
+                else 'none',
+                'width': int_or_none(url_info.get('width')),
+                'height': int_or_none(url_info.get('height')),
+                'tbr': int_or_none(url_info.get('bitrate')),
+                'filesize': int_or_none(url_info.get('filesize')),
+            }
+            for url_info in urls_info
+        ]
+
 
         self._sort_formats(formats)
 
@@ -130,7 +142,9 @@ class ABCIViewIE(InfoExtractor):
     def _real_extract(self, url):
         video_id = self._match_id(url)
         video_params = self._download_json(
-            'https://iview.abc.net.au/api/programs/' + video_id, video_id)
+            f'https://iview.abc.net.au/api/programs/{video_id}', video_id
+        )
+
         title = unescapeHTML(video_params.get('title') or video_params['seriesTitle'])
         stream = next(s for s in video_params['playlist'] if s.get('type') in ('program', 'livestream'))
 

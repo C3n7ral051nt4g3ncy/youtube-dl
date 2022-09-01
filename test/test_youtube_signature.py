@@ -146,8 +146,9 @@ def t_factory(name, sig_func, url_pattern):
                 jscode = testf.read()
             self.assertEqual(sig_func(jscode, sig_input), expected_sig)
 
-        test_func.__name__ = str('test_{0}_js_{1}'.format(name, test_id))
+        test_func.__name__ = 'test_{0}_js_{1}'.format(name, test_id)
         setattr(TestSignature, test_func.__name__, test_func)
+
     return make_tfunc
 
 

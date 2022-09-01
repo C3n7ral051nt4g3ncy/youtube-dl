@@ -81,9 +81,9 @@ class AllocineIE(InfoExtractor):
         formats = []
         quality = qualities(['ld', 'md', 'hd'])
 
-        model = self._html_search_regex(
-            r'data-model="([^"]+)"', webpage, 'data model', default=None)
-        if model:
+        if model := self._html_search_regex(
+            r'data-model="([^"]+)"', webpage, 'data model', default=None
+        ):
             model_data = self._parse_json(model, display_id)
             video = model_data['videos'][0]
             title = video['title']
@@ -101,7 +101,10 @@ class AllocineIE(InfoExtractor):
         else:
             video_id = display_id
             media_data = self._download_json(
-                'http://www.allocine.fr/ws/AcVisiondataV5.ashx?media=%s' % video_id, display_id)
+                f'http://www.allocine.fr/ws/AcVisiondataV5.ashx?media={video_id}',
+                display_id,
+            )
+
             title = remove_end(
                 self._html_search_regex(
                     r'(?s)<title>(.+?)</title>', webpage, 'title').strip(),

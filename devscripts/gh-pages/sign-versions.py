@@ -27,7 +27,7 @@ while True:
 privkey = rsa.PrivateKey.load_pkcs1(privkey)
 
 signature = hexlify(rsa.pkcs1.sign(json.dumps(versions_info, sort_keys=True).encode('utf-8'), privkey, 'SHA-256')).decode()
-print('signature: ' + signature)
+print(f'signature: {signature}')
 
 versions_info['signature'] = signature
 with open('update/versions.json', 'w') as versionsf:

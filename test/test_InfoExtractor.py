@@ -799,8 +799,7 @@ jwplayer("mediaplayer").setup({"abouttext":"Visit Indie DB","aboutlink":"http:\/
         ]
 
         for m3u8_file, m3u8_url, expected_formats in _TEST_CASES:
-            with io.open('./test/testdata/m3u8/%s.m3u8' % m3u8_file,
-                         mode='r', encoding='utf-8') as f:
+            with io.open(f'./test/testdata/m3u8/{m3u8_file}.m3u8', mode='r', encoding='utf-8') as f:
                 formats = self.ie._parse_m3u8_formats(
                     f.read(), m3u8_url, ext='mp4')
                 self.ie._sort_formats(formats)
@@ -1024,8 +1023,7 @@ jwplayer("mediaplayer").setup({"abouttext":"Visit Indie DB","aboutlink":"http:\/
         ]
 
         for mpd_file, mpd_url, mpd_base_url, expected_formats in _TEST_CASES:
-            with io.open('./test/testdata/mpd/%s.mpd' % mpd_file,
-                         mode='r', encoding='utf-8') as f:
+            with io.open(f'./test/testdata/mpd/{mpd_file}.mpd', mode='r', encoding='utf-8') as f:
                 formats = self.ie._parse_mpd_formats(
                     compat_etree_fromstring(f.read().encode('utf-8')),
                     mpd_base_url=mpd_base_url, mpd_url=mpd_url)
@@ -1051,8 +1049,7 @@ jwplayer("mediaplayer").setup({"abouttext":"Visit Indie DB","aboutlink":"http:\/
         ]
 
         for f4m_file, f4m_url, expected_formats in _TEST_CASES:
-            with io.open('./test/testdata/f4m/%s.f4m' % f4m_file,
-                         mode='r', encoding='utf-8') as f:
+            with io.open(f'./test/testdata/f4m/{f4m_file}.f4m', mode='r', encoding='utf-8') as f:
                 formats = self.ie._parse_f4m_formats(
                     compat_etree_fromstring(f.read().encode('utf-8')),
                     f4m_url, None)
@@ -1099,8 +1096,7 @@ jwplayer("mediaplayer").setup({"abouttext":"Visit Indie DB","aboutlink":"http:\/
         ]
 
         for xspf_file, xspf_url, expected_entries in _TEST_CASES:
-            with io.open('./test/testdata/xspf/%s.xspf' % xspf_file,
-                         mode='r', encoding='utf-8') as f:
+            with io.open(f'./test/testdata/xspf/{xspf_file}.xspf', mode='r', encoding='utf-8') as f:
                 entries = self.ie._parse_xspf(
                     compat_etree_fromstring(f.read().encode('utf-8')),
                     xspf_file, xspf_url=xspf_url, xspf_base_url=xspf_url)
